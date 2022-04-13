@@ -41,7 +41,7 @@ void setup() {
   
   delay(1000);
   Serial.println("CLOSED LOOP");
-  odrive.RunState(8, ODriveCAN::AXIS_STATE_CLOSED_LOOP_CONTROL);
+  odrive.RunState(ODriveCAN::AXIS_STATE_CLOSED_LOOP_CONTROL);
 }
 
 void loop() {

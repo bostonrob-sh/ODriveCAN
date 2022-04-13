@@ -49,37 +49,37 @@ public:
         CMD_ID_CANOPEN_HEARTBEAT_MESSAGE = 0x700
     };
 
-    ODriveCAN(uint8_t _can_node_id, send_callback _send_cb, recv_callback _recv_cb):
-      can_node_id(_can_node_id), send_cb(_send_cb), recv_cb(_recv_cb) {};
+    ODriveCAN(uint8_t _axis_id, send_callback _send_cb, recv_callback _recv_cb):
+      axis_id(_axis_id), send_cb(_send_cb), recv_cb(_recv_cb) {};
 
-    void sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
+    void sendMessage(int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
 	
 	  //Heartbeat
 	  int Heartbeat();
 
     // Commands
-    void SetPosition(int axis_id, float position);
-    void SetPosition(int axis_id, float position, float velocity_feedforward);
-    void SetPosition(int axis_id, float position, float velocity_feedforward, float current_feedforward);
-    void SetVelocity(int axis_id, float velocity);
-    void SetVelocity(int axis_id, float velocity, float current_feedforward);
-    void SetVelocityLimit(int axis_id, float velocity_limit);
-    void SetTorque(int axis_id, float torque);
-    void ClearErrors(int axis_id);
+    void SetPosition(float position);
+    void SetPosition(float position, float velocity_feedforward);
+    void SetPosition(float position, float velocity_feedforward, float current_feedforward);
+    void SetVelocity(float velocity);
+    void SetVelocity(float velocity, float current_feedforward);
+    void SetVelocityLimit(float velocity_limit);
+    void SetTorque(float torque);
+    void ClearErrors();
 
     // Getters
-    float GetPosition(int axis_id);
-    float GetVelocity(int axis_id);
-    uint32_t GetMotorError(int axis_id);
-    uint32_t GetEncoderError(int axis_id);
-    uint32_t GetAxisError(int axis_id);
-    uint32_t GetCurrentState(int axis_id);
+    float GetPosition();
+    float GetVelocity();
+    uint32_t GetMotorError();
+    uint32_t GetEncoderError();
+    uint32_t GetAxisError();
+    uint32_t GetCurrentState();
 
     // State helper
-    bool RunState(int axis_id, int requested_state);
+    bool RunState(int requested_state);
 
 private:
-    uint8_t can_node_id;
+    uint8_t axis_id;
     send_callback send_cb;
     recv_callback recv_cb;
     uint8_t _data_size;
