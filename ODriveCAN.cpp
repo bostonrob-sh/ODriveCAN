@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "ODriveTeensyCAN.h"
+#include "ODriveCAN.h"
 #include <CAN.h>
 
 static const int kMotorOffsetFloat = 2;
@@ -20,7 +20,7 @@ static const float feedforwardFactor = 1 / 0.001;
 template<class T> inline Print& operator <<(Print &obj,     T arg) { obj.print(arg);    return obj; }
 template<>        inline Print& operator <<(Print &obj, float arg) { obj.print(arg, 4); return obj; }
 
-void ODriveTeensyCAN::sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes) {
+void ODriveCAN::sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes) {
 //    CAN_message_t return_msg;
 
     int arbitration_id = (axis_id << CommandIDLength) + cmd_id;
@@ -31,13 +31,13 @@ void ODriveTeensyCAN::sendMessage(int axis_id, int cmd_id, bool remote_transmiss
     send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
     while (true) {
         if (recv_cb(arbitration_id, _data, &_data_size)) {
-            memcpy(signal_bytes, _data, sizeof(data_size));
+            memcpy(signal_bytes, _data, _data_size);
             return;
         }
     }
 }
 
-int ODriveTeensyCAN::Heartbeat() {
+int ODriveCAN::Heartbeat() {
 //    CAN_message_t return_msg;
 //	if(Can0.read(return_msg) == 1) {
 //		return (int)(return_msg.id >> 5);
@@ -46,15 +46,15 @@ int ODriveTeensyCAN::Heartbeat() {
 //	}
 }
 
-void ODriveTeensyCAN::SetPosition(int axis_id, float position) {
+void ODriveCAN::SetPosition(int axis_id, float position) {
     SetPosition(axis_id, position, 0.0f, 0.0f);
 }
 
-void ODriveTeensyCAN::SetPosition(int axis_id, float position, float velocity_feedforward) {
+void ODriveCAN::SetPosition(int axis_id, float position, float velocity_feedforward) {
     SetPosition(axis_id, position, velocity_feedforward, 0.0f);
 }
 
-void ODriveTeensyCAN::SetPosition(int axis_id, float position, float velocity_feedforward, float current_feedforward) {
+void ODriveCAN::SetPosition(int axis_id, float position, float velocity_feedforward, float current_feedforward) {
     int16_t vel_ff = (int16_t) (feedforwardFactor * velocity_feedforward);
     int16_t curr_ff = (int16_t) (feedforwardFactor * current_feedforward);
 
@@ -75,11 +75,11 @@ void ODriveTeensyCAN::SetPosition(int axis_id, float position, float velocity_fe
     sendMessage(axis_id, CMD_ID_SET_INPUT_POS, false, 8, position_b);
 }
 
-void ODriveTeensyCAN::SetVelocity(int axis_id, float velocity) {
+void ODriveCAN::SetVelocity(int axis_id, float velocity) {
     SetVelocity(axis_id, velocity, 0.0f);
 }
 
-void ODriveTeensyCAN::SetVelocity(int axis_id, float velocity, float current_feedforward) {
+void ODriveCAN::SetVelocity(int axis_id, float velocity, float current_feedforward) {
     byte* velocity_b = (byte*) &velocity;
     byte* current_feedforward_b = (byte*) &current_feedforward;
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -96,23 +96,23 @@ void ODriveTeensyCAN::SetVelocity(int axis_id, float velocity, float current_fee
     sendMessage(axis_id, CMD_ID_SET_INPUT_VEL, false, 8, velocity_b);
 }
 
-void ODriveTeensyCAN::SetVelocityLimit(int axis_id, float velocity_limit) {
+void ODriveCAN::SetVelocityLimit(int axis_id, float velocity_limit) {
     byte* velocity_limit_b = (byte*) &velocity_limit;
 
     sendMessage(axis_id, CMD_ID_SET_VELOCITY_LIMIT, false, 4, velocity_limit_b);
 }
 
-void ODriveTeensyCAN::SetTorque(int axis_id, float torque) {
+void ODriveCAN::SetTorque(int axis_id, float torque) {
     byte* torque_b = (byte*) &torque;
 
     sendMessage(axis_id, CMD_ID_SET_INPUT_TORQUE, false, 4, torque_b);
 }
 
-void ODriveTeensyCAN::ClearErrors(int axis_id) {
+void ODriveCAN::ClearErrors(int axis_id) {
     sendMessage(axis_id, CMD_ID_CLEAR_ERRORS, false, 0, 0);
 }
 
-float ODriveTeensyCAN::GetPosition(int axis_id) {
+float ODriveCAN::GetPosition(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     sendMessage(axis_id, CMD_ID_GET_ENCODER_ESTIMATES, true, 8, msg_data);
@@ -125,7 +125,7 @@ float ODriveTeensyCAN::GetPosition(int axis_id) {
     return output;
 }
 
-float ODriveTeensyCAN::GetVelocity(int axis_id) {
+float ODriveCAN::GetVelocity(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     sendMessage(axis_id, CMD_ID_GET_ENCODER_ESTIMATES, true, 8, msg_data);
@@ -138,7 +138,7 @@ float ODriveTeensyCAN::GetVelocity(int axis_id) {
     return output;
 }
 
-uint32_t ODriveTeensyCAN::GetMotorError(int axis_id) {
+uint32_t ODriveCAN::GetMotorError(int axis_id) {
     byte msg_data[4] = {0, 0, 0, 0};
 
     sendMessage(axis_id, CMD_ID_GET_MOTOR_ERROR, true, 4, msg_data);
@@ -151,7 +151,7 @@ uint32_t ODriveTeensyCAN::GetMotorError(int axis_id) {
     return output;
 }
 
-uint32_t ODriveTeensyCAN::GetEncoderError(int axis_id) {
+uint32_t ODriveCAN::GetEncoderError(int axis_id) {
     byte msg_data[4] = {0, 0, 0, 0};
 
     sendMessage(axis_id, CMD_ID_GET_ENCODER_ERROR, true, 4, msg_data);
@@ -164,7 +164,7 @@ uint32_t ODriveTeensyCAN::GetEncoderError(int axis_id) {
     return output;
 }
 
-uint32_t ODriveTeensyCAN::GetAxisError(int axis_id) {
+uint32_t ODriveCAN::GetAxisError(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
@@ -184,7 +184,7 @@ uint32_t ODriveTeensyCAN::GetAxisError(int axis_id) {
 //    }
 }
 
-uint32_t ODriveTeensyCAN::GetCurrentState(int axis_id) {
+uint32_t ODriveCAN::GetCurrentState(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
@@ -204,7 +204,7 @@ uint32_t ODriveTeensyCAN::GetCurrentState(int axis_id) {
 //    }
 }
 
-bool ODriveTeensyCAN::RunState(int axis_id, int requested_state) {
+bool ODriveCAN::RunState(int axis_id, int requested_state) {
     sendMessage(axis_id, CMD_ID_SET_AXIS_REQUESTED_STATE, false, 4, (byte*) &requested_state);
     return true;
 }

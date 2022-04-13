@@ -1,12 +1,12 @@
-#ifndef ODriveTeensyCAN_h
-#define ODriveTeensyCAN_h
+#ifndef ODriveCAN_h
+#define ODriveCAN_h
 
 #include "Arduino.h"
 
 typedef void (*send_callback)(uint32_t arbitration_id, uint8_t *data, uint8_t dlc, bool rtr);
 typedef bool (*recv_callback)(uint32_t arbitration_id, uint8_t *data, uint8_t *dlc);
 
-class ODriveTeensyCAN {
+class ODriveCAN {
 public:
     enum AxisState_t {
         AXIS_STATE_UNDEFINED = 0,           //<! will fall through to idle
@@ -49,7 +49,7 @@ public:
         CMD_ID_CANOPEN_HEARTBEAT_MESSAGE = 0x700
     };
 
-    ODriveTeensyCAN(uint8_t _can_node_id, send_callback _send_cb, recv_callback _recv_cb):
+    ODriveCAN(uint8_t _can_node_id, send_callback _send_cb, recv_callback _recv_cb):
       can_node_id(_can_node_id), send_cb(_send_cb), recv_cb(_recv_cb) {};
 
     void sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
