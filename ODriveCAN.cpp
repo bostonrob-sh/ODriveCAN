@@ -204,7 +204,7 @@ uint32_t ODriveCAN::GetCurrentState() {
 //    }
 }
 
-bool ODriveCAN::RunState(int requested_state) {
-    sendMessage(CMD_ID_SET_AXIS_REQUESTED_STATE, false, 4, (byte*) &requested_state);
+bool ODriveCAN::RunState(uint8_t requested_state) {
+    sendMessage(CMD_ID_SET_AXIS_REQUESTED_STATE, false, 1, (byte*) &requested_state);
     return true;
 }

@@ -76,7 +76,7 @@ public:
     uint32_t GetCurrentState();
 
     // State helper
-    bool RunState(int requested_state);
+    bool RunState(uint8_t requested_state);
 
 private:
     uint8_t axis_id;
