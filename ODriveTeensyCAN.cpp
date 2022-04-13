@@ -1,6 +1,6 @@
 #include "Arduino.h"
 #include "ODriveTeensyCAN.h"
-#include <FlexCAN_T4.h>
+#include <CAN.h>
 
 static const int kMotorOffsetFloat = 2;
 static const int kMotorStrideFloat = 28;
@@ -16,49 +16,34 @@ static const int CommandIDLength = 5;
 
 static const float feedforwardFactor = 1 / 0.001;
 
-static const int CANBaudRate = 250000;
-
 // Print with stream operator
 template<class T> inline Print& operator <<(Print &obj,     T arg) { obj.print(arg);    return obj; }
 template<>        inline Print& operator <<(Print &obj, float arg) { obj.print(arg, 4); return obj; }
 
-FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16> Can0;
-// FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_16> Can0;
-
-ODriveTeensyCAN::ODriveTeensyCAN() {
-    Can0.begin();
-    Can0.setBaudRate(CANBaudRate);
-}
-
 void ODriveTeensyCAN::sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes) {
-    CAN_message_t msg;
-    CAN_message_t return_msg;
+//    CAN_message_t return_msg;
 
-    msg.id = (axis_id << CommandIDLength) + cmd_id;
-    msg.flags.remote = remote_transmission_request;
-    msg.len = length;
+    int arbitration_id = (axis_id << CommandIDLength) + cmd_id;
     if (!remote_transmission_request) {
-        memcpy(msg.buf, signal_bytes, sizeof(signal_bytes));
-        Can0.write(msg);
-        return;
+        return send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
     }
 
-    Can0.write(msg);
+    send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
     while (true) {
-        if (Can0.read(return_msg) && (return_msg.id == msg.id)) {
-            memcpy(signal_bytes, return_msg.buf, sizeof(return_msg.buf));
+        if (recv_cb(arbitration_id, _data, &_data_size)) {
+            memcpy(signal_bytes, _data, sizeof(data_size));
             return;
         }
     }
 }
 
 int ODriveTeensyCAN::Heartbeat() {
-    CAN_message_t return_msg;
-	if(Can0.read(return_msg) == 1) {
-		return (int)(return_msg.id >> 5);
-	} else {
-		return -1;
-	}
+//    CAN_message_t return_msg;
+//	if(Can0.read(return_msg) == 1) {
+//		return (int)(return_msg.id >> 5);
+//	} else {
+//		return -1;
+//	}
 }
 
 void ODriveTeensyCAN::SetPosition(int axis_id, float position) {
@@ -183,40 +168,40 @@ uint32_t ODriveTeensyCAN::GetAxisError(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
-    CAN_message_t return_msg;
+//    CAN_message_t return_msg;
 
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
 
-    while (true) {
-        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
-            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
-            *((uint8_t *)(&output) + 0) = msg_data[0];
-            *((uint8_t *)(&output) + 1) = msg_data[1];
-            *((uint8_t *)(&output) + 2) = msg_data[2];
-            *((uint8_t *)(&output) + 3) = msg_data[3];
-            return output;
-        }
-    }
+//    while (true) {
+//        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
+//            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
+//            *((uint8_t *)(&output) + 0) = msg_data[0];
+//            *((uint8_t *)(&output) + 1) = msg_data[1];
+//            *((uint8_t *)(&output) + 2) = msg_data[2];
+//            *((uint8_t *)(&output) + 3) = msg_data[3];
+//            return output;
+//        }
+//    }
 }
 
 uint32_t ODriveTeensyCAN::GetCurrentState(int axis_id) {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
-    CAN_message_t return_msg;
+//    CAN_message_t return_msg;
 
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
 
-    while (true) {
-        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
-            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
-            *((uint8_t *)(&output) + 0) = msg_data[4];
-            *((uint8_t *)(&output) + 1) = msg_data[5];
-            *((uint8_t *)(&output) + 2) = msg_data[6];
-            *((uint8_t *)(&output) + 3) = msg_data[7];
-            return output;
-        }
-    }
+//    while (true) {
+//        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
+//            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
+//            *((uint8_t *)(&output) + 0) = msg_data[4];
+//            *((uint8_t *)(&output) + 1) = msg_data[5];
+//            *((uint8_t *)(&output) + 2) = msg_data[6];
+//            *((uint8_t *)(&output) + 3) = msg_data[7];
+//            return output;
+//        }
+//    }
 }
 
 bool ODriveTeensyCAN::RunState(int axis_id, int requested_state) {

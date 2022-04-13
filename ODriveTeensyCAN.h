@@ -3,6 +3,9 @@
 
 #include "Arduino.h"
 
+typedef void (*send_callback)(uint32_t arbitration_id, uint8_t *data, uint8_t dlc, bool rtr);
+typedef bool (*recv_callback)(uint32_t arbitration_id, uint8_t *data, uint8_t *dlc);
+
 class ODriveTeensyCAN {
 public:
     enum AxisState_t {
@@ -46,12 +49,13 @@ public:
         CMD_ID_CANOPEN_HEARTBEAT_MESSAGE = 0x700
     };
 
-    ODriveTeensyCAN();
+    ODriveTeensyCAN(uint8_t _can_node_id, send_callback _send_cb, recv_callback _recv_cb):
+      can_node_id(_can_node_id), send_cb(_send_cb), recv_cb(_recv_cb) {};
 
     void sendMessage(int axis_id, int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
 	
-	//Heartbeat
-	int Heartbeat();
+	  //Heartbeat
+	  int Heartbeat();
 
     // Commands
     void SetPosition(int axis_id, float position);
@@ -59,9 +63,9 @@ public:
     void SetPosition(int axis_id, float position, float velocity_feedforward, float current_feedforward);
     void SetVelocity(int axis_id, float velocity);
     void SetVelocity(int axis_id, float velocity, float current_feedforward);
-	void SetVelocityLimit(int axis_id, float velocity_limit);
+    void SetVelocityLimit(int axis_id, float velocity_limit);
     void SetTorque(int axis_id, float torque);
-	void ClearErrors(int axis_id);
+    void ClearErrors(int axis_id);
 
     // Getters
     float GetPosition(int axis_id);
@@ -73,6 +77,13 @@ public:
 
     // State helper
     bool RunState(int axis_id, int requested_state);
+
+private:
+    uint8_t can_node_id;
+    send_callback send_cb;
+    recv_callback recv_cb;
+    uint8_t _data_size;
+    uint8_t _data[8];
 
 };
 
