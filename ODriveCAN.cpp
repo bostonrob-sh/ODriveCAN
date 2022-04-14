@@ -256,6 +256,19 @@ uint32_t ODriveCAN::GetCurrentState() {
     }
 }
 
+float ODriveCAN::GetVbusVoltage() {
+    byte msg_data[4] = {0, 0, 0, 0};
+
+    sendMessage(CMD_ID_GET_VBUS_VOLTAGE, true, 0, msg_data);
+
+    float output;
+    *((uint8_t *)(&output) + 0) = msg_data[0];
+    *((uint8_t *)(&output) + 1) = msg_data[1];
+    *((uint8_t *)(&output) + 2) = msg_data[2];
+    *((uint8_t *)(&output) + 3) = msg_data[3];
+    return output;
+}
+
 bool ODriveCAN::RunState(uint8_t requested_state) {
     sendMessage(CMD_ID_SET_AXIS_REQUESTED_STATE, false, 1, (byte*) &requested_state);
     return true;

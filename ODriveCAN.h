@@ -78,6 +78,7 @@ public:
 
     uint32_t GetAxisError();    // blocking ~100ms until the next heartbeat
     uint32_t GetCurrentState(); // --""--
+    float GetVbusVoltage();
     void ReceiveHeartBeat(uint32_t* error, uint32_t* state);  // non-blocking
 
     // State helper

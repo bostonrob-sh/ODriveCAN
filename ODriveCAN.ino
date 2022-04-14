@@ -133,7 +133,7 @@ void loop() {
 
     Serial << p;
     Serial << " " << pos << " " << vel;
-    Serial << " " << odrive.GetIQMeasured();
+    Serial << " " << odrive.GetIQMeasured() << "\t" << odrive.GetVbusVoltage();
     Serial << "\n";
     loop_i++;
 
