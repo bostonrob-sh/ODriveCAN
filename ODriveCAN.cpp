@@ -37,15 +37,6 @@ void ODriveCAN::sendMessage(int cmd_id, bool remote_transmission_request, int le
     }
 }
 
-int ODriveCAN::Heartbeat() {
-//    CAN_message_t return_msg;
-//	if(Can0.read(return_msg) == 1) {
-//		return (int)(return_msg.id >> 5);
-//	} else {
-//		return -1;
-//	}
-}
-
 void ODriveCAN::SetPosition(float position) {
     SetPosition(position, 0.0f, 0.0f);
 }
@@ -115,7 +106,7 @@ void ODriveCAN::ClearErrors() {
 float ODriveCAN::GetPosition() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    sendMessage(CMD_ID_GET_ENCODER_ESTIMATES, true, 8, msg_data);
+    sendMessage(CMD_ID_GET_ENCODER_ESTIMATES, true, 0, msg_data);
 
     float_t output;
     *((uint8_t *)(&output) + 0) = msg_data[0];
@@ -128,7 +119,7 @@ float ODriveCAN::GetPosition() {
 float ODriveCAN::GetVelocity() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-    sendMessage(CMD_ID_GET_ENCODER_ESTIMATES, true, 8, msg_data);
+    sendMessage(CMD_ID_GET_ENCODER_ESTIMATES, true, 0, msg_data);
 
     float_t output;
     *((uint8_t *)(&output) + 0) = msg_data[4];
@@ -138,28 +129,28 @@ float ODriveCAN::GetVelocity() {
     return output;
 }
 
-void ODriveCAN::ReceivePosVel(float* pos, float* vel) {
+void ODriveCAN::ReceivePosVel() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_GET_ENCODER_ESTIMATES;
 
     if (recv_cb(msg_id, msg_data, &_data_size)) {
-        *((uint8_t *)pos + 0) = msg_data[0];
-        *((uint8_t *)pos + 1) = msg_data[1];
-        *((uint8_t *)pos + 2) = msg_data[2];
-        *((uint8_t *)pos + 3) = msg_data[3];
+        *((uint8_t *)&pos + 0) = msg_data[0];
+        *((uint8_t *)&pos + 1) = msg_data[1];
+        *((uint8_t *)&pos + 2) = msg_data[2];
+        *((uint8_t *)&pos + 3) = msg_data[3];
 
-        *((uint8_t *)vel + 0) = msg_data[4];
-        *((uint8_t *)vel + 1) = msg_data[5];
-        *((uint8_t *)vel + 2) = msg_data[6];
-        *((uint8_t *)vel + 3) = msg_data[7];
+        *((uint8_t *)&vel + 0) = msg_data[4];
+        *((uint8_t *)&vel + 1) = msg_data[5];
+        *((uint8_t *)&vel + 2) = msg_data[6];
+        *((uint8_t *)&vel + 3) = msg_data[7];
     }
 }
 
 uint32_t ODriveCAN::GetMotorError() {
     byte msg_data[4] = {0, 0, 0, 0};
 
-    sendMessage(CMD_ID_GET_MOTOR_ERROR, true, 4, msg_data);
+    sendMessage(CMD_ID_GET_MOTOR_ERROR, true, 0, msg_data);
 
     uint32_t output;
     *((uint8_t *)(&output) + 0) = msg_data[0];
@@ -172,7 +163,7 @@ uint32_t ODriveCAN::GetMotorError() {
 uint32_t ODriveCAN::GetEncoderError() {
     byte msg_data[4] = {0, 0, 0, 0};
 
-    sendMessage(CMD_ID_GET_ENCODER_ERROR, true, 4, msg_data);
+    sendMessage(CMD_ID_GET_ENCODER_ERROR, true, 0, msg_data);
 
     uint32_t output;
     *((uint8_t *)(&output) + 0) = msg_data[0];
@@ -182,21 +173,21 @@ uint32_t ODriveCAN::GetEncoderError() {
     return output;
 }
 
-void ODriveCAN::ReceiveHeartBeat(uint32_t* error, uint32_t* state) {
+void ODriveCAN::ReceiveHeartBeat() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
 
     if (recv_cb(msg_id, msg_data, &_data_size)) {
-        *((uint8_t *)error + 0) = msg_data[0];
-        *((uint8_t *)error + 1) = msg_data[1];
-        *((uint8_t *)error + 2) = msg_data[2];
-        *((uint8_t *)error + 3) = msg_data[3];
+        *((uint8_t *)&error + 0) = msg_data[0];
+        *((uint8_t *)&error + 1) = msg_data[1];
+        *((uint8_t *)&error + 2) = msg_data[2];
+        *((uint8_t *)&error + 3) = msg_data[3];
 
-        *((uint8_t *)state + 0) = msg_data[4];
-        *((uint8_t *)state + 1) = msg_data[5];
-        *((uint8_t *)state + 2) = msg_data[6];
-        *((uint8_t *)state + 3) = msg_data[7];
+        *((uint8_t *)&state + 0) = msg_data[4];
+        *((uint8_t *)&state + 1) = msg_data[5];
+        *((uint8_t *)&state + 2) = msg_data[6];
+        *((uint8_t *)&state + 3) = msg_data[7];
     }
 }
 

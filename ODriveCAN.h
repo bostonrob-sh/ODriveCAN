@@ -53,9 +53,10 @@ public:
       axis_id(_axis_id), send_cb(_send_cb), recv_cb(_recv_cb) {};
 
     void sendMessage(int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes);
-	
-	  //Heartbeat
-	  int Heartbeat();
+
+    // Passive receiving from ODrive (non-blocking)
+    void ReceiveHeartBeat();
+    void ReceivePosVel();
 
     // Commands
     void SetPosition(float position);
@@ -70,7 +71,6 @@ public:
     // Getters
     float GetPosition();
     float GetVelocity();
-    void ReceivePosVel(float* pos, float* vel);
     uint32_t GetMotorError();
     uint32_t GetEncoderError();
     float GetIQMeasured();
@@ -79,10 +79,12 @@ public:
     uint32_t GetAxisError();    // blocking ~100ms until the next heartbeat
     uint32_t GetCurrentState(); // --""--
     float GetVbusVoltage();
-    void ReceiveHeartBeat(uint32_t* error, uint32_t* state);  // non-blocking
 
     // State helper
     bool RunState(uint8_t requested_state);
+
+    uint32_t error, state;
+    float pos, vel;
 
 private:
     uint8_t axis_id;

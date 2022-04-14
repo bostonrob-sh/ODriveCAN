@@ -17,8 +17,6 @@ ODriveCAN odrive(16, &send_cb, &recv_cb);
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 
-float pos, vel;
-
 void send_cb(uint32_t arbitration_id, uint8_t *data, uint8_t data_size, bool rtr)
 {
 //  Serial.println(arbitration_id, HEX);
@@ -114,14 +112,13 @@ void readGyroscope() {
 
 void IRAM_ATTR onReceive(int packetSize) {
   if (CAN.packetId() == 0x201) {
-    uint32_t error, state;
-    odrive.ReceiveHeartBeat(&error, &state);
+    odrive.ReceiveHeartBeat();
 //    Serial.println(state & 0xff, HEX);  // current state
-    if (error) {
+    if (odrive.error) {
       Serial << "HEART ";
-      Serial.print(error, HEX);
+      Serial.print(odrive.error, HEX);
       Serial << " ";
-      Serial.println(state, HEX);
+      Serial.println(odrive.state, HEX);
     } else {
 //      Serial << '.';
     }
@@ -129,7 +126,7 @@ void IRAM_ATTR onReceive(int packetSize) {
   }
 
   if (CAN.packetId() == 0x209) {
-      odrive.ReceivePosVel(&pos, &vel);
+      odrive.ReceivePosVel();
 //      Serial << "@";
   }
 
@@ -194,7 +191,7 @@ void setup() {
   Serial.println("CLOSED LOOP");
   odrive.RunState(ODriveCAN::AXIS_STATE_CLOSED_LOOP_CONTROL);
 
-  start_p = pos;
+  start_p = odrive.pos;
 
   slow_loop.start(1000, AsyncDelay::MILLIS);
   fast_loop.start(5, AsyncDelay::MILLIS);
@@ -220,8 +217,8 @@ void loop() {
     }
 
 //    Serial << p;
-//    Serial << " " << pos << " " << vel;
-    Serial << " " << v;
+    Serial << " " << odrive.pos << " " << odrive.vel;
+//    Serial << " " << v;
 //    Serial << " " << odrive.GetIQMeasured();
     Serial << " " << realAngle << " " << angleSpeed / 10;
     Serial << "\n";
@@ -229,7 +226,7 @@ void loop() {
 
     fast_loop.repeat();
   }
-/*
+
   if (slow_loop.isExpired()) {
     int mot_err = odrive.GetMotorError();
     if (mot_err) {
@@ -246,5 +243,5 @@ void loop() {
 
     slow_loop.repeat();
   }
-*/
+
 }
