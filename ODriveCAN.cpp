@@ -21,17 +21,17 @@ template<class T> inline Print& operator <<(Print &obj,     T arg) { obj.print(a
 template<>        inline Print& operator <<(Print &obj, float arg) { obj.print(arg, 4); return obj; }
 
 void ODriveCAN::sendMessage(int cmd_id, bool remote_transmission_request, int length, byte *signal_bytes) {
-//    CAN_message_t return_msg;
-
     int arbitration_id = (axis_id << CommandIDLength) + cmd_id;
     if (!remote_transmission_request) {
-        return send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
+        send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
+        return;
     }
 
+    byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     send_cb(arbitration_id, signal_bytes, length, remote_transmission_request);
     while (true) {
-        if (recv_cb(arbitration_id, _data, &_data_size)) {
-            memcpy(signal_bytes, _data, _data_size);
+        if (recv_cb(arbitration_id, msg_data, &_data_size)) {
+          memcpy(signal_bytes, msg_data, _data_size);
             return;
         }
     }
@@ -72,7 +72,7 @@ void ODriveCAN::SetPosition(float position, float velocity_feedforward, float cu
     msg_data[6] = current_feedforward_b[0];
     msg_data[7] = current_feedforward_b[1];
 
-    sendMessage(CMD_ID_SET_INPUT_POS, false, 8, position_b);
+    sendMessage(CMD_ID_SET_INPUT_POS, false, 8, msg_data);
 }
 
 void ODriveCAN::SetVelocity(float velocity) {
@@ -93,7 +93,7 @@ void ODriveCAN::SetVelocity(float velocity, float current_feedforward) {
     msg_data[6] = current_feedforward_b[2];
     msg_data[7] = current_feedforward_b[3];
     
-    sendMessage(CMD_ID_SET_INPUT_VEL, false, 8, velocity_b);
+    sendMessage(CMD_ID_SET_INPUT_VEL, false, 8, msg_data);
 }
 
 void ODriveCAN::SetVelocityLimit(float velocity_limit) {
@@ -138,6 +138,24 @@ float ODriveCAN::GetVelocity() {
     return output;
 }
 
+void ODriveCAN::ReceivePosVel(float* pos, float* vel) {
+    byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    int msg_id = (axis_id << CommandIDLength) + CMD_ID_GET_ENCODER_ESTIMATES;
+
+    if (recv_cb(msg_id, msg_data, &_data_size)) {
+        *((uint8_t *)pos + 0) = msg_data[0];
+        *((uint8_t *)pos + 1) = msg_data[1];
+        *((uint8_t *)pos + 2) = msg_data[2];
+        *((uint8_t *)pos + 3) = msg_data[3];
+
+        *((uint8_t *)vel + 0) = msg_data[4];
+        *((uint8_t *)vel + 1) = msg_data[5];
+        *((uint8_t *)vel + 2) = msg_data[6];
+        *((uint8_t *)vel + 3) = msg_data[7];
+    }
+}
+
 uint32_t ODriveCAN::GetMotorError() {
     byte msg_data[4] = {0, 0, 0, 0};
 
@@ -164,44 +182,78 @@ uint32_t ODriveCAN::GetEncoderError() {
     return output;
 }
 
+void ODriveCAN::ReceiveHeartBeat(uint32_t* error, uint32_t* state) {
+    byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
+
+    if (recv_cb(msg_id, msg_data, &_data_size)) {
+        *((uint8_t *)error + 0) = msg_data[0];
+        *((uint8_t *)error + 1) = msg_data[1];
+        *((uint8_t *)error + 2) = msg_data[2];
+        *((uint8_t *)error + 3) = msg_data[3];
+
+        *((uint8_t *)state + 0) = msg_data[4];
+        *((uint8_t *)state + 1) = msg_data[5];
+        *((uint8_t *)state + 2) = msg_data[6];
+        *((uint8_t *)state + 3) = msg_data[7];
+    }
+}
+
+float ODriveCAN::GetIQMeasured() {
+    float iq_set, iq_measured;
+    GetIQ(&iq_set, &iq_measured);
+    return iq_measured;
+}
+
+void ODriveCAN::GetIQ(float* iq_set, float* iq_measured) {
+    byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+    sendMessage(CMD_ID_GET_IQ, true, 0, msg_data);
+
+    *((uint8_t *)iq_set + 0) = msg_data[0];
+    *((uint8_t *)iq_set + 1) = msg_data[1];
+    *((uint8_t *)iq_set + 2) = msg_data[2];
+    *((uint8_t *)iq_set + 3) = msg_data[3];
+
+    *((uint8_t *)iq_measured + 0) = msg_data[4];
+    *((uint8_t *)iq_measured + 1) = msg_data[5];
+    *((uint8_t *)iq_measured + 2) = msg_data[6];
+    *((uint8_t *)iq_measured + 3) = msg_data[7];
+}
+
 uint32_t ODriveCAN::GetAxisError() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
-//    CAN_message_t return_msg;
-
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
 
-//    while (true) {
-//        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
-//            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
-//            *((uint8_t *)(&output) + 0) = msg_data[0];
-//            *((uint8_t *)(&output) + 1) = msg_data[1];
-//            *((uint8_t *)(&output) + 2) = msg_data[2];
-//            *((uint8_t *)(&output) + 3) = msg_data[3];
-//            return output;
-//        }
-//    }
+    while (true) {
+        if (recv_cb(msg_id, msg_data, &_data_size)) {
+            *((uint8_t *)(&output) + 0) = msg_data[0];
+            *((uint8_t *)(&output) + 1) = msg_data[1];
+            *((uint8_t *)(&output) + 2) = msg_data[2];
+            *((uint8_t *)(&output) + 3) = msg_data[3];
+            return output;
+        }
+    }
 }
 
 uint32_t ODriveCAN::GetCurrentState() {
     byte msg_data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t output;
 
-//    CAN_message_t return_msg;
-
     int msg_id = (axis_id << CommandIDLength) + CMD_ID_ODRIVE_HEARTBEAT_MESSAGE;
 
-//    while (true) {
-//        if (Can0.read(return_msg) && (return_msg.id == msg_id)) {
-//            memcpy(msg_data, return_msg.buf, sizeof(return_msg.buf));
-//            *((uint8_t *)(&output) + 0) = msg_data[4];
-//            *((uint8_t *)(&output) + 1) = msg_data[5];
-//            *((uint8_t *)(&output) + 2) = msg_data[6];
-//            *((uint8_t *)(&output) + 3) = msg_data[7];
-//            return output;
-//        }
-//    }
+    while (true) {
+        if (recv_cb(msg_id, msg_data, &_data_size)) {
+            *((uint8_t *)(&output) + 0) = msg_data[4];
+            *((uint8_t *)(&output) + 1) = msg_data[5];
+            *((uint8_t *)(&output) + 2) = msg_data[6];
+            *((uint8_t *)(&output) + 3) = msg_data[7];
+            return output;
+        }
+    }
 }
 
 bool ODriveCAN::RunState(uint8_t requested_state) {

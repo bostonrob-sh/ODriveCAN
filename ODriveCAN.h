@@ -70,10 +70,15 @@ public:
     // Getters
     float GetPosition();
     float GetVelocity();
+    void ReceivePosVel(float* pos, float* vel);
     uint32_t GetMotorError();
     uint32_t GetEncoderError();
-    uint32_t GetAxisError();
-    uint32_t GetCurrentState();
+    float GetIQMeasured();
+    void GetIQ(float* iq_set, float* iq_measured);
+
+    uint32_t GetAxisError();    // blocking ~100ms until the next heartbeat
+    uint32_t GetCurrentState(); // --""--
+    void ReceiveHeartBeat(uint32_t* error, uint32_t* state);  // non-blocking
 
     // State helper
     bool RunState(uint8_t requested_state);
@@ -83,7 +88,6 @@ private:
     send_callback send_cb;
     recv_callback recv_cb;
     uint8_t _data_size;
-    uint8_t _data[8];
 
 };
 
