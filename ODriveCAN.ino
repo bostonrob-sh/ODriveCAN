@@ -1,6 +1,10 @@
 #include <CAN.h>
 #include "ODriveCAN.h"
 #include <AsyncDelay.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+
 
 // Printing with stream operator helper functions
 template<class T> inline Print& operator <<(Print &obj,     T arg) { obj.print(arg);    return obj; }
@@ -10,6 +14,8 @@ AsyncDelay slow_loop;
 AsyncDelay fast_loop;
 
 ODriveCAN odrive(16, &send_cb, &recv_cb);
+
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
 
 float pos, vel;
 
@@ -34,6 +40,76 @@ bool recv_cb(uint32_t arbitration_id, uint8_t *data, uint8_t *data_size) {
     return true;
   }
   return false;
+}
+
+
+bool displayCalStatus(void)
+{
+    /* Get the four calibration values (0..3) */
+    /* Any sensor data reporting 0 should be ignored, */
+    /* 3 means 'fully calibrated" */
+    uint8_t system, gyro, accel, mag;
+    system = gyro = accel = mag = 0;
+    bno.getCalibration(&system, &gyro, &accel, &mag);
+
+    /* The data should be ignored until the system calibration is > 0 */
+    if (!system)
+    {
+        Serial.print("! ");
+    }
+
+    /* Display the individual values */
+    Serial.print("Sys:");
+    Serial.print(system, DEC);
+    Serial.print(" G:");
+    Serial.print(gyro, DEC);
+    Serial.print(" A:");
+    Serial.print(accel, DEC);
+    Serial.print(" M:");
+    Serial.println(mag, DEC);
+
+    return system > 0 && gyro >=3;
+}
+
+void setupBNO055() {
+  adafruit_bno055_offsets_t calibData;
+
+  calibData.accel_offset_x = -36;
+  calibData.accel_offset_y = -120;
+  calibData.accel_offset_z = -12;
+  calibData.gyro_offset_x = 0;
+  calibData.gyro_offset_y = -2;
+  calibData.gyro_offset_z = 0;
+  calibData.mag_offset_x = -866;
+  calibData.mag_offset_y = 350;
+  calibData.mag_offset_z = -146;
+  calibData.accel_radius = 1000;
+  calibData.mag_radius = 790;
+
+  if(!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
+
+  Serial.println("Restoring Calibration data to the BNO055...");
+  bno.setSensorOffsets(calibData);
+  delay(500);
+  bno.setExtCrystalUse(true); // Crystal must be configured AFTER loading calibration
+
+  while(!displayCalStatus())
+    delay(500); // wait for gyro
+}
+
+float realAngle, angleSpeed;
+
+void readGyroscope() {
+  sensors_event_t event;
+  bno.getEvent(&event);
+  realAngle = -event.orientation.z; // positive in front, z is actually x!
+  bno.getEvent(&event, Adafruit_BNO055::VECTOR_GYROSCOPE);
+  angleSpeed = event.gyro.x * 57.2958;  // radians to degrees
 }
 
 void IRAM_ATTR onReceive(int packetSize) {
@@ -107,8 +183,12 @@ void setup() {
     while (1);
   }
 
+  setupBNO055();
+
   // register the receive callback
   CAN.onReceive(onReceive);
+
+  odrive.ClearErrors();
 
   delay(1000);
   Serial.println("CLOSED LOOP");
@@ -121,19 +201,29 @@ void setup() {
 }
 
 int loop_i = 0;
-float p;
+float p = 0, v = 0;
 
 void loop() {
   if (fast_loop.isExpired()) {
-    if (loop_i < 1000) {
-      p = start_p + 2*sin(loop_i / 100.0);
+    readGyroscope();
+    if (loop_i < 200) {
+      v += 0.3 * 0.005;
+      p += v;
+//      p = start_p + 2*sin(loop_i / 10.0);
       odrive.SetPosition(p);
     }
-//    else return;  // !!!!!!!!!!!
+    else if (loop_i < 400) {
+      odrive.SetPosition(0);
+    }
+    else {
+      return;  // !!!!!!!!!!!
+    }
 
-    Serial << p;
-    Serial << " " << pos << " " << vel;
-    Serial << " " << odrive.GetIQMeasured() << "\t" << odrive.GetVbusVoltage();
+//    Serial << p;
+//    Serial << " " << pos << " " << vel;
+    Serial << " " << v;
+//    Serial << " " << odrive.GetIQMeasured();
+    Serial << " " << realAngle << " " << angleSpeed / 10;
     Serial << "\n";
     loop_i++;
 
